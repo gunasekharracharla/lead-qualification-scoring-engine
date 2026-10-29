@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Lead Qualification</title>
+<link rel="stylesheet" href="/css/style.css" />
+<script>
+  // Apply saved theme before first paint to avoid a flash of the wrong theme.
+  (function () {
+    var saved = localStorage.getItem("theme");
+    var theme = saved || (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+</head>
+<body>
+
+<div class="bg-glow"></div>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-mark">AI</span>
+      <span class="brand-text">Lead <strong>Intelligence</strong></span>
+    </div>
+    <div class="topbar-right">
+      <button type="button" class="theme-toggle" id="themeToggle" aria-label="Toggle light/dark theme" title="Toggle light/dark theme">
+        <span class="icon-sun">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="2" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        </span>
+        <span class="icon-moon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </span>
+      </button>
+      <div class="status-pill" id="statusPill">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">Checking engine…</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="hero">
+  <div class="hero-inner">
+    <p class="eyebrow">AI Lead Qualification &amp; Scoring Engine</p>
+    <h1>Qualify every lead <span class="accent">before</span> your first call.</h1>
+    <p class="subhead">
+      Enter what you know about a prospect. The engine evaluates ICP fit, calculates a
+      deterministic 0–100 score, and recommends the right offer and next action — instantly.
+    </p>
+    <div class="hero-badges" aria-label="Key capabilities">
+      <span>ICP fit scoring</span>
+      <span>Offer recommendation</span>
+      <span>Sales action plan</span>
+    </div>
+  </div>
+</main>
+
+<section class="stats-bar-section">
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-card">
+      <span class="stat-value" id="statTotal">0</span>
+      <span class="stat-label">Total Leads</span>
+    </div>
+    <div class="stat-card stat-hot">
+      <span class="stat-value" id="statHot">0</span>
+      <span class="stat-label">HOT</span>
+    </div>
+    <div class="stat-card stat-warm">
+      <span class="stat-value" id="statWarm">0</span>
+      <span class="stat-label">WARM</span>
+    </div>
+    <div class="stat-card stat-cold">
+      <span class="stat-value" id="statCold">0</span>
+      <span class="stat-label">COLD</span>
+    </div>
+  </div>
+</section>
+
+<section class="workspace">
+  <div class="workspace-inner">
+
+    <!-- LEFT: FORM -->
+    <div class="panel form-panel">
+      <div class="panel-head">
+        <div>
+          <h2>Lead Information</h2>
+          <p class="panel-sub">Only name and company are required.</p>
+        </div>
+        <span class="step-chip">Step 01</span>
+      </div>
+
+      <form id="leadForm" novalidate>
+        <div class="grid-2">
+          <div class="field">
+            <label for="name">Lead Name <span class="req">*</span></label>
+            <input type="text" id="name" name="name" placeholder="John Smith" required />
+          </div>
+          <div class="field">
+            <label for="company">Company Name <span class="req">*</span></label>
+            <input type="text" id="company" name="company" placeholder="ABC SaaS" required />
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="job_title">Job Title</label>
+            <input type="text" id="job_title" name="job_title" placeholder="Founder / CEO" />
+          </div>
+          <div class="field">
+            <label for="country">Country</label>
+            <input type="text" id="country" name="country" placeholder="United States" />
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="industry">Industry</label>
+            <input type="text" id="industry" name="industry" placeholder="SaaS" />
+          </div>
+          <div class="field">
+            <label for="company_size">Company Size</label>
+            <input type="number" id="company_size" name="company_size" placeholder="50" min="0" />
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="field">
+            <label for="website">Website</label>
+            <input type="text" id="website" name="website" placeholder="https://example.com" />
+          </div>
+          <div class="field">
+            <label for="linkedin">LinkedIn</label>
+            <input type="text" id="linkedin" name="linkedin" placeholder="linkedin.com/company/..." />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="pain_point">Pain Point <span class="optional">(optional but improves accuracy)</span></label>
+          <textarea id="pain_point" name="pain_point" rows="2" placeholder="e.g. Manual lead qualification and follow-up are taking too much time."></textarea>
+        </div>
+
+        <div class="field">
+          <label for="buying_signal">Buying Signal <span class="optional">(optional)</span></label>
+          <textarea id="buying_signal" name="buying_signal" rows="2" placeholder="e.g. Actively evaluating automation vendors."></textarea>
+        </div>
+
+        <div class="field">
+          <label for="custom_offer">
+            Custom Offer <span class="optional">(optional — leave blank to auto-generate)</span>
+          </label>
+          <input type="text" id="custom_offer" name="custom_offer" placeholder="Auto-generated if left blank" />
+        </div>
+
+        <div class="field">
+          <label>Recent Activity <span class="optional">(hiring, expansion, or other relevant activity)</span></label>
+          <div class="toggle-group" id="recentActivityToggle" role="group" aria-label="Recent activity">
+            <button type="button" class="toggle-btn" data-value="true" id="raYes">Yes</button>
+            <button type="button" class="toggle-btn active" data-value="false" id="raNo">No</button>
+          </div>
+          <p class="field-hint">Recent Activity is scored as a plain Yes/No (worth 5 points). Use the Buying Signal field above to describe the actual activity.</p>
+        </div>
+
+        <button type="submit" class="btn-primary" id="submitBtn">
+          <span id="submitLabel">Analyze Lead</span>
+          <span class="spinner" id="submitSpinner" hidden></span>
+        </button>
+
+        <p class="form-error" id="formError" hidden></p>
+      </form>
+    </div>
+
+    <!-- RIGHT: RESULT -->
+    <div class="panel result-panel">
+      <div class="panel-head">
+        <div>
+          <h2>Qualification Result</h2>
+          <p class="panel-sub">Generated live from the scoring engine.</p>
+        </div>
+        <span class="step-chip">Step 02</span>
+      </div>
+
+      <div id="resultEmpty" class="result-empty">
+        <div class="empty-icon">AI</div>
+        <p>Fill in the form and click <strong>Analyze Lead</strong> to see the qualification result here.</p>
+      </div>
+
+      <div id="cachedBanner" class="cached-banner" hidden>Existing lead found — showing stored qualification.</div>
+
+      <div id="resultContent" class="result-content" hidden>
+        <div class="result-topline">
+          <div>
+            <div class="result-name" id="resNameCompany"></div>
+            <div class="result-sub" id="resTitleCountry"></div>
+          </div>
+          <div class="score-badge" id="scoreBadge">
+            <span class="score-value" id="scoreValue">0</span>
+            <span class="score-max">/100</span>
+          </div>
+        </div>
+
+        <div class="classification-row">
+          <span class="classification-tag" id="classificationTag">—</span>
+          <span class="icp-tag" id="icpTag" title="Qualification score measures overall buying and qualification signals. ICP Fit measures alignment with the defined ideal customer profile.">—</span>
+          <span class="mini-chip" id="buyingIntentChip">Buying Intent: —</span>
+        </div>
+        <p class="icp-help">Qualification score measures overall buying and qualification signals. ICP Fit separately measures alignment with the defined ideal customer profile — a lead can be HOT while not being a perfect ICP Fit.</p>
+
+        <div class="result-grid">
+          <div class="result-block">
+            <h4>Matched Criteria</h4>
+            <ul id="resMatchedCriteria" class="tag-list empty-list"></ul>
+          </div>
+          <div class="result-block">
+            <h4>Missing Criteria</h4>
+            <ul id="resMissingCriteria" class="tag-list empty-list"></ul>
+          </div>
+        </div>
+
+        <div class="result-section">
+          <h3>Why this score</h3>
+          <p id="resReason" class="reason-text"></p>
+        </div>
+
+        <div class="result-section">
+          <h3>Recent Activity</h3>
+          <div class="activity-row">
+            <span class="activity-flag" id="resActivityFlag">—</span>
+            <p id="resBuyingSignalNote" class="reason-text"></p>
+          </div>
+        </div>
+
+        <div class="result-grid">
+          <div class="result-block">
+            <h4>Pain Points</h4>
+            <ul id="resPainPoints" class="tag-list empty-list"></ul>
+          </div>
+          <div class="result-block">
+            <h4>Buying Signals</h4>
+            <ul id="resBuyingSignals" class="tag-list empty-list"></ul>
+          </div>
+        </div>
+
+        <div class="result-section">
+          <h3>Recommended Offer</h3>
+          <p id="resOffer" class="offer-text"></p>
+        </div>
+
+        <div class="result-section">
+          <h3>Next Action</h3>
+          <p id="resNextAction" class="action-text"></p>
+        </div>
+
+        <div class="result-actions">
+          <button class="btn-secondary" id="copyOfferBtn" type="button">Copy offer</button>
+          <button class="btn-secondary" id="copyPlanBtn" type="button">Copy action</button>
+        </div>
+
+        <div class="result-grid result-grid-3">
+          <div class="result-block">
+            <h4>Recommended Team</h4>
+            <p id="resRecommendedTeam" class="reason-text">—</p>
+          </div>
+          <div class="result-block">
+            <h4>Expected Revenue</h4>
+            <p id="resExpectedRevenue" class="reason-text">—</p>
+          </div>
+          <div class="result-block">
+            <h4>Win Probability</h4>
+            <p id="resProbability" class="reason-text">—</p>
+          </div>
+        </div>
+
+        <div class="result-section">
+          <h3>Score Breakdown</h3>
+          <div id="resBreakdown" class="breakdown-bars"></div>
+        </div>
+
+        <div class="result-meta" id="resMeta"></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- SALES ACTION PLAN -->
+<section class="sap-section" id="sapSection" hidden>
+  <div class="sap-inner">
+    <div class="sap-head">
+      <div>
+        <h2>Sales Action Plan</h2>
+        <p class="panel-sub">What to do next with this lead, generated from the qualification result above.</p>
+      </div>
+      <span class="step-chip">Step 03</span>
+    </div>
+
+    <div class="sap-grid">
+
+      <div class="sap-card sap-wide" id="sapNextAction">
+        <h4>Next Action</h4>
+        <p class="sap-text" id="sapNextActionText"></p>
+      </div>
+
+      <div class="sap-card" id="sapApproach">
+        <h4>How to Approach</h4>
+        <p class="sap-text" id="sapApproachText"></p>
+      </div>
+
+      <div class="sap-card" id="sapCommStrategy">
+        <h4>Communication Strategy</h4>
+        <p class="sap-text" id="sapCommStrategyText"></p>
+      </div>
+
+      <div class="sap-card" id="sapMeetingObjective">
+        <h4>Meeting Objective</h4>
+        <p class="sap-text" id="sapMeetingObjectiveText"></p>
+      </div>
+
+      <div class="sap-card" id="sapOffer">
+        <h4>Recommended Offer</h4>
+        <p class="sap-text" id="sapOfferText"></p>
+      </div>
+
+      <div class="sap-card" id="sapTalkingPoints">
+        <h4>Talking Points</h4>
+        <ul class="sap-list" id="sapTalkingPointsList"></ul>
+      </div>
+
+      <div class="sap-card" id="sapDiscoveryQuestions">
+        <h4>Questions to Ask</h4>
+        <ul class="sap-list" id="sapDiscoveryQuestionsList"></ul>
+      </div>
+
+      <div class="sap-card" id="sapPainPoints">
+        <h4>Pain Points to Validate</h4>
+        <ul class="sap-list" id="sapPainPointsList"></ul>
+      </div>
+
+      <div class="sap-card" id="sapTeam">
+        <h4>Recommended Team</h4>
+        <ul class="sap-list sap-pill-list" id="sapTeamList"></ul>
+      </div>
+
+      <div class="sap-card sap-wide" id="sapObjections">
+        <h4>Possible Objections &amp; How to Handle Them</h4>
+        <div class="sap-objection-grid">
+          <div>
+            <p class="sap-subhead">Likely objections</p>
+            <ul class="sap-list" id="sapObjectionsList"></ul>
+          </div>
+          <div>
+            <p class="sap-subhead">Recommended responses</p>
+            <ul class="sap-list" id="sapObjectionHandlingList"></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="sap-card" id="sapAfterMeeting">
+        <h4>After Meeting</h4>
+        <ul class="sap-list" id="sapAfterMeetingList"></ul>
+      </div>
+
+      <div class="sap-card" id="sapInfoToCollect">
+        <h4>Information to Collect</h4>
+        <ul class="sap-list" id="sapInfoToCollectList"></ul>
+      </div>
+
+      <div class="sap-card" id="sapSuccessCriteria">
+        <h4>Success Criteria</h4>
+        <ul class="sap-list" id="sapSuccessCriteriaList"></ul>
+      </div>
+
+      <div class="sap-card" id="sapFollowUp">
+        <h4>Follow-up Plan</h4>
+        <p class="sap-text" id="sapFollowUpText"></p>
+      </div>
+
+    </div>
+    <div class="sap-meta" id="sapMeta"></div>
+  </div>
+</section>
+
+<section class="history-section">
+  <div class="history-inner">
+    <div class="history-head">
+      <h2>Recent Leads</h2>
+      <div class="history-actions">
+        <button class="btn-ghost" id="refreshHistory">Refresh</button>
+        <button class="btn-ghost btn-danger" id="clearAllLeads">Clear All</button>
+      </div>
+    </div>
+
+    <div class="history-toolbar">
+      <div class="history-search-wrap">
+        <input id="leadSearchInput" type="search" placeholder="Search leads, company or score" aria-label="Search leads" />
+      </div>
+      <div class="history-filters" aria-label="Lead filters">
+        <button type="button" class="filter-btn active" data-filter="all">All</button>
+        <button type="button" class="filter-btn" data-filter="hot">Hot</button>
+        <button type="button" class="filter-btn" data-filter="warm">Warm</button>
+        <button type="button" class="filter-btn" data-filter="cold">Cold</button>
+      </div>
+    </div>
+
+    <div id="historyList" class="history-list">
+      <div class="history-empty-state">
+        <p>No leads yet</p>
+        <p class="history-empty-sub">Add your first lead to begin qualification.</p>
+        <button class="btn-primary history-empty-cta" id="addFirstLeadBtn" type="button">Add Your First Lead</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="drawer-backdrop" id="leadDrawerBackdrop" hidden></div>
+<aside class="lead-detail-drawer" id="leadDetailDrawer" aria-hidden="true" tabindex="-1">
+  <div class="drawer-header">
+    <div>
+      <p class="drawer-kicker">Lead detail</p>
+      <h3 id="drawerTitle">Lead</h3>
+    </div>
+    <button type="button" class="drawer-close" id="drawerCloseBtn" aria-label="Close lead detail">×</button>
+  </div>
+  <div id="drawerBody" class="drawer-body"></div>
+</aside>
+
+<footer class="footer">
+  <p>AI Lead Qualification &amp; Scoring Engine</p>
+</footer>
+
+<script>
+  // Theme toggle — UI only, does not touch any scoring/business logic.
+  (function () {
+    var btn = document.getElementById("themeToggle");
+    btn.addEventListener("click", function () {
+      var current = document.documentElement.getAttribute("data-theme") || "dark";
+      var next = current === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      localStorage.setItem("theme", next);
+    });
+  })();
+</script>
+<script src="/js/app.js"></script>
+</body>
+</html>

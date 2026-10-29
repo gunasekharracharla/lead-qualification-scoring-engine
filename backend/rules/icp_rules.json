@@ -1,0 +1,7 @@
+{
+  "target_countries": ["United States", "United Kingdom", "USA", "UK", "US"],
+  "target_industries": ["SaaS", "Software", "Technology", "B2B SaaS", "IT Services", "AI"],
+  "company_size_min": 10,
+  "company_size_max": 300,
+  "notes": "A lead must match target_countries AND target_industries AND fall within the company size range to be marked icp_fit = true. This is a mandatory gate, separate from the points-based score below."
+}

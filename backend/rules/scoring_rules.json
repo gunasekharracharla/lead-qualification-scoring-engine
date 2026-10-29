@@ -1,0 +1,20 @@
+{
+  "criteria": {
+    "target_industry": 20,
+    "decision_maker": 15,
+    "company_size": 10,
+    "pain_point": 20,
+    "buying_signal": 20,
+    "automation_opportunity": 10,
+    "recent_activity": 5
+  },
+  "thresholds": {
+    "hot": 80,
+    "warm": 60,
+    "cold":50
+  },
+  "decision_maker_titles": [
+    "founder", "co-founder", "ceo", "cto", "coo", "vp", "vice president",
+    "head of", "director", "chief"
+  ]
+}

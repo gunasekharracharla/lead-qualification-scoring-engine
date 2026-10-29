@@ -1,0 +1,14 @@
+{
+  "hot": {
+    "offer": "AI Lead-to-Sales Automation",
+    "next_action": "Contact within 24 hours and schedule a sales/demo call."
+  },
+  "warm": {
+    "offer": "AI Lead Qualification & CRM Automation",
+    "next_action": "Start targeted outreach and schedule a follow-up within 3-5 days."
+  },
+  "cold": {
+    "offer": "Custom Software Development",
+    "next_action": "Add to nurture sequence; do not prioritize for immediate outreach."
+  }
+}
