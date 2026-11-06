@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Integer, JSON, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.database.database import Base
@@ -33,6 +33,7 @@ class LeadRecord(Base):
     buying_signal: Mapped[str | None] = mapped_column(Text)
     custom_offer: Mapped[str | None] = mapped_column(String(200))
     recent_activity: Mapped[bool | None] = mapped_column(Boolean)
+    status: Mapped[str] = mapped_column(String(30), default="New", nullable=False)
 
     # --- Qualification result fields (all persisted, retrievable by ID) ---
     score: Mapped[int | None] = mapped_column(Integer)
@@ -68,3 +69,16 @@ class LeadRecord(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
     )
+
+
+class QualificationHistory(Base):
+    __tablename__ = "qualification_history"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    lead_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("leads.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    lead_data: Mapped[dict] = mapped_column(JSON, nullable=False)
+    qualification: Mapped[dict] = mapped_column(JSON, nullable=False)
+    rules_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)

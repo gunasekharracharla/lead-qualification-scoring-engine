@@ -28,6 +28,10 @@ class Settings:
 
     # Database - real SQL, defaults to local SQLite file, swap to Postgres via env var only
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./leads.db")
+    if DATABASE_URL.startswith(("postgres://", "postgresql://")):
+        DATABASE_URL = DATABASE_URL.replace(
+            "postgres://", "postgresql+psycopg://", 1
+        ).replace("postgresql://", "postgresql+psycopg://", 1)
 
     # CORS - not strictly needed since frontend+backend share an origin, but kept for flexibility
     CORS_ORIGINS = [x.strip() for x in os.getenv(

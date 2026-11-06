@@ -6,10 +6,10 @@ from sqlalchemy.orm import Session
 from backend.config.settings import settings
 from backend.database.database import get_db
 from backend.database.repository import (
-    create_lead_record, delete_all_lead_records, delete_lead_record, get_lead, get_lead_by_identity, list_leads,
-    update_lead_record,
+    create_lead_record, create_qualification_history, delete_all_lead_records, delete_lead_record,
+    get_lead, get_lead_by_identity, list_leads, list_qualification_history, update_lead_record,
 )
-from backend.schemas.lead_schema import LeadCreate, LeadUpdate
+from backend.schemas.lead_schema import LeadCreate, LeadStatusUpdate, LeadUpdate
 from backend.services.analysis_service import analyze_lead
 from backend.services.fingerprint_service import compute_fingerprint, compute_identity_key
 
@@ -33,6 +33,7 @@ def _lead_dict(record) -> dict:
         "buying_signal": record.buying_signal,
         "custom_offer": record.custom_offer,
         "recent_activity": record.recent_activity,
+        "status": record.status,
         "created_at": record.created_at.isoformat() if record.created_at else None,
         "updated_at": record.updated_at.isoformat() if record.updated_at else None,
     }
@@ -66,6 +67,37 @@ def _qualification_dict(record) -> dict:
         "ai_insights": record.ai_insights,
         "sales_action_plan": record.sales_action_plan,
     }
+
+
+def _lead_input_dict(record) -> dict:
+    return {
+        "name": record.name,
+        "company": record.company,
+        "job_title": record.job_title,
+        "country": record.country,
+        "industry": record.industry,
+        "company_size": record.company_size,
+        "website": record.website,
+        "linkedin": record.linkedin,
+        "pain_point": record.pain_point,
+        "buying_signal": record.buying_signal,
+        "custom_offer": record.custom_offer,
+        "recent_activity": record.recent_activity,
+    }
+
+
+def _save_qualification_run(
+    db: Session, record, previous_run: dict | None = None
+) -> None:
+    history = list_qualification_history(db, record.id)
+    if not history and previous_run is not None:
+        create_qualification_history(
+            db, record.id, previous_run["lead"], previous_run["qualification"], commit=False
+        )
+    create_qualification_history(
+        db, record.id, _lead_input_dict(record), _qualification_dict(record), commit=False
+    )
+    db.commit()
 
 
 @router.get("/health")
@@ -130,6 +162,13 @@ def qualify_lead(lead: LeadCreate, db: Session = Depends(get_db)):
     else:
         logger.info("No existing qualification found. Running Groq analysis.")
 
+    previous_run = None
+    if existing is not None and existing.score is not None:
+        previous_run = {
+            "lead": _lead_input_dict(existing),
+            "qualification": _qualification_dict(existing),
+        }
+
     result = analyze_lead(lead)
 
     record_data = lead.model_dump()
@@ -162,10 +201,14 @@ def qualify_lead(lead: LeadCreate, db: Session = Depends(get_db)):
     })
 
     if existing is not None:
-        record = update_lead_record(db, existing, record_data)
+        record = update_lead_record(db, existing, record_data, commit=False)
+    else:
+        record = create_lead_record(db, record_data, commit=False)
+
+    _save_qualification_run(db, record, previous_run)
+    if existing is not None:
         logger.info(f"Qualification persisted for lead_id={record.id} (updated existing lead).")
     else:
-        record = create_lead_record(db, record_data)
         logger.info(f"Qualification persisted for lead_id={record.id} (new lead).")
 
     return {
@@ -253,6 +296,13 @@ def update_lead_by_id(lead_id: int, lead: LeadUpdate, db: Session = Depends(get_
     if merged.get("company_size") is not None and merged["company_size"] <= 0:
         raise HTTPException(status_code=400, detail="Company size must be a positive number")
 
+    previous_run = None
+    if record.score is not None:
+        previous_run = {
+            "lead": _lead_input_dict(record),
+            "qualification": _qualification_dict(record),
+        }
+
     # Recompute a real identity + fingerprint using the edited data.
     identity_key = compute_identity_key(type("LeadPayload", (), merged)())
     fingerprint = compute_fingerprint(type("LeadPayload", (), merged)())
@@ -285,7 +335,8 @@ def update_lead_by_id(lead_id: int, lead: LeadUpdate, db: Session = Depends(get_
         "sales_action_plan": result["sales_action_plan"],
     })
 
-    updated = update_lead_record(db, record, record_data)
+    updated = update_lead_record(db, record, record_data, commit=False)
+    _save_qualification_run(db, updated, previous_run)
     logger.info(f"Lead {lead_id} updated and requalified successfully.")
     return {
         "success": True,
@@ -325,3 +376,38 @@ def get_qualification_by_lead_id(lead_id: int, db: Session = Depends(get_db)):
         "success": True,
         "qualification": _qualification_dict(record),
     }
+
+
+@router.get("/leads/{lead_id}/qualification-history")
+def get_qualification_history(lead_id: int, db: Session = Depends(get_db)):
+    if get_lead(db, lead_id) is None:
+        raise HTTPException(status_code=404, detail=f"Lead with id {lead_id} not found")
+    history = list_qualification_history(db, lead_id)
+    return {
+        "success": True,
+        "count": len(history),
+        "history": [
+            {
+                "id": item.id,
+                "lead_id": item.lead_id,
+                "lead": item.lead_data,
+                "qualification": item.qualification,
+                "rules_version": item.rules_version,
+                "created_at": item.created_at.isoformat(),
+            }
+            for item in history
+        ],
+    }
+
+
+@router.patch("/leads/{lead_id}/status")
+def update_lead_status(
+    lead_id: int,
+    update: LeadStatusUpdate,
+    db: Session = Depends(get_db),
+):
+    record = get_lead(db, lead_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail=f"Lead with id {lead_id} not found")
+    updated = update_lead_record(db, record, {"status": update.status})
+    return {"success": True, "lead": _lead_dict(updated)}

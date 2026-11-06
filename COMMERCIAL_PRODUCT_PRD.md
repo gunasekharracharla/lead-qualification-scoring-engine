@@ -45,6 +45,7 @@ This snapshot is based on a limited inspection of the project files, not a compl
 - Website research fetches a bounded number of same-site HTML pages, extracts text, and retains source URLs. It is best-effort and can be unavailable for some websites.
 - The system stores leads and qualification outputs with SQLAlchemy; the default configuration uses SQLite.
 - The UI includes a lead form, qualification result area, recent-lead list, summary counts, and light/dark theme control.
+- Leads have an editable sales status, and qualification runs are retained with their input snapshot, result, timestamp, and a fingerprint of the local rules files.
 - Automated tests exist for API behavior and multiple scoring/analysis services.
 - AI provider and database configuration are environment-based.
 
@@ -54,8 +55,8 @@ Treat these as open questions, not confirmed absences:
 
 - Authentication, workspace/tenant isolation, and role-based authorization.
 - Production-grade deployment, monitoring, backups, restore testing, and incident response.
-- CRM integration, CSV import/export, user invitations, assignment workflow, billing, and customer onboarding.
-- Scoring-rule administration, approval, version history, and end-user override/audit workflow.
+- CRM integration, CSV import/export, user invitations, lead ownership/assignment, billing, and customer onboarding.
+- Scoring-rule administration, approval/change history, and end-user override/audit workflow.
 - Privacy, retention, deletion, consent/legal basis, and external provider data-handling review.
 - Whether current tests cover production security, concurrent workloads, and all integration failure paths.
 
@@ -156,6 +157,8 @@ Implement this journey only after the design partner confirms which CRM and work
 | FR-11 | P1 | User feedback loop | Users can mark recommendations helpful/not helpful and provide structured override reasons; these signals are available for product analysis. |
 | FR-12 | P1 | Admin configuration | Authorized admins can review scoring configuration. Changes are validated, versioned, and attributable before affecting new qualifications. |
 | FR-13 | P1 | Data lifecycle | Admin/operator can execute documented data export/deletion processes consistent with retention policy and applicable obligations. |
+
+**Current implementation note:** Lead status and qualification-run history are available in the prototype. History records created before this capability was introduced cannot be reconstructed, and authentication/authorization is not implemented; do not use these endpoints with real customer data.
 
 ### Product handling principles
 

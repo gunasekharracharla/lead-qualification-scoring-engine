@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -56,3 +58,7 @@ class LeadUpdate(BaseModel):
     buying_signal: str | None = None
     custom_offer: str | None = None
     recent_activity: bool | None = Field(default=None, strict=True)
+
+
+class LeadStatusUpdate(BaseModel):
+    status: Literal["New", "Contacted", "Qualified", "Disqualified", "Converted"]

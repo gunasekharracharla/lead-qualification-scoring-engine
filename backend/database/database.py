@@ -75,4 +75,10 @@ def run_light_migrations() -> None:
             continue
         col_type = column.type.compile(engine.dialect)
         with engine.begin() as conn:
-            conn.execute(text(f'ALTER TABLE leads ADD COLUMN "{column.name}" {col_type}'))
+            if column.name == "status":
+                conn.execute(text(
+                    f'ALTER TABLE leads ADD COLUMN "{column.name}" {col_type} '
+                    "NOT NULL DEFAULT 'New'"
+                ))
+            else:
+                conn.execute(text(f'ALTER TABLE leads ADD COLUMN "{column.name}" {col_type}'))

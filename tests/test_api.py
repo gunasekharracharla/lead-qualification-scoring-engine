@@ -33,9 +33,13 @@ def test_legacy_offer_column_migrates_without_losing_value(monkeypatch):
             offer = connection.execute(
                 text("SELECT custom_offer FROM leads WHERE id = 1")
             ).scalar_one()
+            status = connection.execute(
+                text("SELECT status FROM leads WHERE id = 1")
+            ).scalar_one()
         assert "custom_offer" in columns
         assert "mnrathi_offer" not in columns
         assert offer == "Existing offer"
+        assert status == "New"
     finally:
         migration_engine.dispose()
 
@@ -218,6 +222,57 @@ def test_lead_includes_created_and_updated_timestamps():
     listed = next(l for l in list_res.json()["leads"] if l["id"] == res.json()["lead"]["id"])
     assert listed["created_at"] is not None
     assert listed["updated_at"] is not None
+
+
+def test_lead_workflow_status_can_be_updated_and_is_validated():
+    created = client.post("/qualify-lead", json={"name": "Status Test", "company": "StatusCo"})
+    lead_id = created.json()["lead"]["id"]
+    assert created.json()["lead"]["status"] == "New"
+
+    updated = client.patch(f"/leads/{lead_id}/status", json={"status": "Contacted"})
+    assert updated.status_code == 200
+    assert updated.json()["lead"]["status"] == "Contacted"
+
+    listed = client.get("/leads").json()["leads"]
+    assert next(lead for lead in listed if lead["id"] == lead_id)["status"] == "Contacted"
+    assert client.patch(f"/leads/{lead_id}/status", json={"status": "Unknown"}).status_code == 422
+    assert client.patch("/leads/999999/status", json={"status": "Qualified"}).status_code == 404
+
+
+def test_qualification_history_preserves_runs_and_skips_cached_submissions():
+    payload = {
+        "name": "History Test",
+        "company": "HistoryCo",
+        "industry": "SaaS",
+        "company_size": 80,
+    }
+    first = client.post("/qualify-lead", json=payload).json()
+    lead_id = first["lead"]["id"]
+
+    cached = client.post("/qualify-lead", json=payload).json()
+    assert cached["cached"] is True
+    history = client.get(f"/leads/{lead_id}/qualification-history").json()["history"]
+    assert len(history) == 1
+    assert history[0]["qualification"]["score"] == first["qualification"]["score"]
+    assert history[0]["lead"]["company_size"] == 80
+    assert len(history[0]["rules_version"]) == 64
+
+    changed = {**payload, "company_size": 20}
+    second = client.post("/qualify-lead", json=changed).json()
+    history = client.get(f"/leads/{lead_id}/qualification-history").json()["history"]
+    assert len(history) == 2
+    assert history[0]["qualification"]["score"] == second["qualification"]["score"]
+    assert history[1]["qualification"]["score"] == first["qualification"]["score"]
+
+    edited = client.put(f"/leads/{lead_id}", json={"company_size": 30})
+    assert edited.status_code == 200
+    history = client.get(f"/leads/{lead_id}/qualification-history").json()["history"]
+    assert len(history) == 3
+    assert history[0]["qualification"]["score"] == edited.json()["qualification"]["score"]
+
+
+def test_qualification_history_for_missing_lead_returns_404():
+    assert client.get("/leads/999999/qualification-history").status_code == 404
 
 
 _SALES_PLAN_KEYS = [

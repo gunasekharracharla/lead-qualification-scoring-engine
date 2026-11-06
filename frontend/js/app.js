@@ -1,6 +1,5 @@
-// Same-origin API calls -- frontend and backend are served from the same
-// FastAPI app/port, so relative paths work with no CORS configuration needed.
-const API_BASE = "";
+// Empty for the local same-origin FastAPI app; set in config.js for Netlify.
+const API_BASE = (window.LEAD_SCORING_API_URL || "").replace(/\/+$/, "");
 
 // Max points per scoring criterion, mirroring backend/rules/scoring_rules.json.
 // Used ONLY to render the visual breakdown bars - the backend remains the
@@ -214,6 +213,7 @@ function openLeadDrawer(item) {
   const hasWebsiteResearch = typeof websiteResearch?.summary === "string" && websiteResearch.summary.trim();
   const drawerTitle = document.getElementById("drawerTitle");
   drawerTitle.textContent = `${item.name} · ${item.company}`;
+  leadDrawer.dataset.leadId = String(item.id);
   drawerBody.innerHTML = `
     <div class="drawer-summary">
       <div>
@@ -229,6 +229,21 @@ function openLeadDrawer(item) {
       <div class="drawer-meta-item"><small>Country</small><strong>${item.country || "—"}</strong></div>
       <div class="drawer-meta-item"><small>ICP fit</small><strong>${q.icp_fit !== undefined ? (q.icp_fit ? "Strong" : "Not fit") : "—"}</strong></div>
     </div>
+
+    <div class="field drawer-status-field">
+      <label for="drawerLeadStatus">Sales status</label>
+      <select id="drawerLeadStatus">
+        ${["New", "Contacted", "Qualified", "Disqualified", "Converted"].map((status) =>
+          `<option value="${status}" ${status === (item.status || "New") ? "selected" : ""}>${status}</option>`
+        ).join("")}
+      </select>
+    </div>
+
+    <section class="drawer-card-section">
+      <h4>Qualification history</h4>
+      <p class="history-loading" id="qualificationHistoryLoading">Loading previous runs…</p>
+      <ul id="qualificationHistoryList" class="qualification-history-list"></ul>
+    </section>
 
     ${hasWebsiteResearch ? `
       <div class="drawer-card-section website-research-section">
@@ -352,6 +367,30 @@ function openLeadDrawer(item) {
   }
 
   const editForm = document.getElementById("drawerEditForm");
+  const statusSelect = document.getElementById("drawerLeadStatus");
+  statusSelect.addEventListener("change", async () => {
+    const previousStatus = item.status || "New";
+    statusSelect.disabled = true;
+    try {
+      const response = await fetch(`${API_BASE}/leads/${item.id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: statusSelect.value }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.detail || "Unable to update this lead's status.");
+      }
+      item.status = result.lead.status;
+      await loadHistory();
+    } catch (err) {
+      statusSelect.value = previousStatus;
+      alert(err.message || "Unable to update this lead's status.");
+    } finally {
+      statusSelect.disabled = false;
+    }
+  });
+
   const drawerEditTrigger = document.querySelector(".drawer-edit-trigger");
   const deleteTrigger = document.querySelector(".drawer-delete-trigger");
   const cancelButton = document.querySelector("[data-drawer-cancel]");
@@ -412,6 +451,45 @@ function openLeadDrawer(item) {
   leadDrawer.classList.add("open");
   leadDrawer.setAttribute("aria-hidden", "false");
   leadDrawerBackdrop.hidden = false;
+  loadQualificationHistory(item.id);
+}
+
+async function loadQualificationHistory(leadId) {
+  const list = document.getElementById("qualificationHistoryList");
+  const loading = document.getElementById("qualificationHistoryLoading");
+  if (!list || !loading) return;
+  list.replaceChildren();
+  loading.hidden = false;
+  loading.textContent = "Loading previous runs…";
+  try {
+    const response = await fetch(`${API_BASE}/leads/${leadId}/qualification-history`);
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.detail || "Unable to load qualification history.");
+    }
+    if (leadDrawer.dataset.leadId !== String(leadId)) return;
+    loading.hidden = true;
+    if (!data.history.length) {
+      loading.hidden = false;
+      loading.textContent = "No qualification history available.";
+      return;
+    }
+    data.history.forEach((run) => {
+      const entry = document.createElement("li");
+      const title = document.createElement("strong");
+      title.textContent = `${formatDate(run.created_at)} · ${run.qualification.classification} · ${run.qualification.score}/100`;
+      const reason = document.createElement("p");
+      reason.textContent = run.qualification.reason || "No qualification summary available.";
+      const version = document.createElement("small");
+      version.textContent = `Rules ${run.rules_version.slice(0, 12)}`;
+      entry.append(title, reason, version);
+      list.appendChild(entry);
+    });
+  } catch (err) {
+    if (leadDrawer.dataset.leadId !== String(leadId)) return;
+    loading.hidden = false;
+    loading.textContent = err.message || "Unable to load qualification history.";
+  }
 }
 
 function closeLeadDrawer() {
@@ -617,6 +695,7 @@ function buildLeadCard(item) {
     <div class="lead-card-chips">
       <span class="mini-chip ${q?.icp_fit ? "fit" : ""}">ICP: ${q ? (q.icp_fit ? "Strong" : "Not Fit") : "—"}</span>
       <span class="mini-chip">Intent: ${q ? q.buying_intent : "—"}</span>
+      <span class="mini-chip">Status: ${escapeHtml(item.status || "New")}</span>
       ${q?.recommended_offer ? `<span class="mini-chip offer-chip">${q.recommended_offer}</span>` : ""}
     </div>
     <div class="lead-card-footer">

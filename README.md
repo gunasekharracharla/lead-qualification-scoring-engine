@@ -11,6 +11,7 @@ An AI-assisted B2B lead qualification application built with FastAPI, SQLAlchemy
 - Uses an AI provider to interpret supplied lead information and available website text into structured signals.
 - Applies deterministic ICP rules and configurable scoring weights; the AI does not choose the final numeric score.
 - Classifies results as HOT, WARM, or COLD and provides recommendations and a sales action plan.
+- Tracks a lead's sales status and preserves each qualification run with its input snapshot and rules fingerprint.
 - Persists lead and qualification data in SQLite by default.
 - Provides endpoints to create/update, retrieve, list, and delete leads.
 
@@ -89,6 +90,30 @@ python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 
 Open the UI at <http://127.0.0.1:8000/>. API documentation is available at <http://127.0.0.1:8000/docs>.
 
+## Deploy frontend on Netlify and API on Render
+
+The Netlify site hosts the static UI; the FastAPI API and database run separately.
+The Render blueprint in `render.yaml` creates the API service. In Render, provision
+a PostgreSQL database and set `DATABASE_URL` to its internal connection URL. Set
+`CORS_ORIGINS` to the exact Netlify site origin (for example,
+`https://your-site.netlify.app`), with no path or trailing slash. To enable live AI,
+set `AI_ENABLED=true` and add the selected provider's credentials in Render.
+
+1. Push the project to a Git provider and deploy the site on Netlify from the
+   repository. `netlify.toml` publishes the `frontend` directory.
+2. Create a Render Blueprint from the same repository using `render.yaml`,
+   provision PostgreSQL, and set `DATABASE_URL` and `CORS_ORIGINS` in the service
+   environment. Use the Netlify site origin for `CORS_ORIGINS`.
+3. After the Render API is healthy, copy its public service URL (the backend URL)
+   into `window.LEAD_SCORING_API_URL` in `frontend/config.js`, without a trailing
+   slash, then push that change so Netlify redeploys.
+
+Keep database and AI credentials in Render's environment settings, not in frontend
+files or Git. SQLite is intended for local development; use the managed PostgreSQL
+database for deployed lead data. This prototype does not include authentication or
+tenant isolation, so do not expose it to untrusted users or enter real customer
+data without adding appropriate safeguards.
+
 ## API overview
 
 The FastAPI application serves the UI and API on the same origin.
@@ -100,7 +125,9 @@ The FastAPI application serves the UI and API on the same origin.
 | `GET` | `/leads` | List leads |
 | `GET` | `/leads/{lead_id}` | Retrieve a lead and its qualification |
 | `PUT` | `/leads/{lead_id}` | Update a lead |
+| `PATCH` | `/leads/{lead_id}/status` | Update a lead's sales status (`New`, `Contacted`, `Qualified`, `Disqualified`, or `Converted`) |
 | `GET` | `/leads/{lead_id}/qualification` | Retrieve qualification details |
+| `GET` | `/leads/{lead_id}/qualification-history` | Retrieve prior qualification runs |
 | `DELETE` | `/leads/{lead_id}` | Delete one lead |
 | `DELETE` | `/leads` | Delete all leads in the configured database |
 
@@ -138,7 +165,8 @@ Scoring and ICP criteria are currently configured in repository JSON files. The 
 ## Current limitations and production work
 
 - No verified authentication or workspace/tenant isolation.
-- No CRM connector, billing, or customer-facing team administration workflow.
+- No lead ownership, CRM connector, billing, or customer-facing team administration workflow.
+- Qualification history covers runs recorded after this feature was added; older records have no reconstructed historical snapshots.
 - Website research is best-effort and may fail, omit content, or return incomplete context.
 - SQLite is the local default, not a production scale recommendation.
 - AI output can be incomplete or incorrect; review results before acting on them.

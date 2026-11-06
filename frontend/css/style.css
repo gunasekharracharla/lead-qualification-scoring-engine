@@ -209,7 +209,7 @@ body {
 .req { color: var(--hot); }
 .optional { color: var(--text-faint); font-weight: 400; font-size: 11.5px; }
 
-input[type="text"], input[type="number"], textarea {
+input[type="text"], input[type="number"], textarea, select {
   width: 100%;
   background: var(--bg-elevated);
   border: 1px solid var(--panel-border);
@@ -508,6 +508,16 @@ input[type="number"].is-invalid + .field-hint {
 .drawer-card-section ul {
   list-style: none; display: flex; flex-direction: column; gap: 6px;
 }
+.qualification-history-list { margin-top: 8px; }
+.qualification-history-list li strong,
+.qualification-history-list li small {
+  display: block;
+}
+.qualification-history-list li strong { color: var(--text); margin-bottom: 4px; }
+.qualification-history-list li p { margin-bottom: 4px; }
+.qualification-history-list li small { color: var(--text-faint); font-size: 10px; }
+.drawer-status-field { margin-bottom: 14px; }
+.history-loading { margin-top: 8px; }
 .drawer-card-section li {
   background: var(--panel); border: 1px solid var(--panel-border); border-radius: 8px; padding: 8px 10px;
 }
